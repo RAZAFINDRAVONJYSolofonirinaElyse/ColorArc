@@ -1,26 +1,147 @@
 @import "tailwindcss";
 
+/* Light theme */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8f8fc;
+  --foreground: #111118;
+  --surface: #ffffff;
+  --surface-hover: #f0f0f8;
+  --border: #e2e2ec;
+  --muted: #7c7c9a;
+  --accent: #6c3de8;
+  --accent-hover: #5a2fd6;
+}
+
+/* Dark theme */
+[data-theme="dark"] {
+  --background: #0e0e14;
+  --foreground: #ececf4;
+  --surface: #18181f;
+  --surface-hover: #22222c;
+  --border: #2e2e3a;
+  --muted: #7070a0;
+  --accent: #8b5cf6;
+  --accent-hover: #7c3aed;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ── Animations ── */
+
+@keyframes float-swatch {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33%       { transform: translateY(-8px) rotate(1deg); }
+  66%       { transform: translateY(4px) rotate(-1deg); }
+}
+
+@keyframes gradient-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes mock-float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-10px); }
+}
+
+@keyframes shimmer-card {
+  0%   { transform: translateX(-100%) skewX(-12deg); }
+  100% { transform: translateX(250%) skewX(-12deg); }
+}
+
+@keyframes orb-pulse {
+  0%, 100% { opacity: 0.18; transform: scale(1); }
+  50%       { opacity: 0.28; transform: scale(1.1); }
+}
+
+.animate-float      { animation: float-swatch 4s ease-in-out infinite; }
+.animate-gradient   { animation: gradient-shift 6s ease infinite; background-size: 300% 300%; }
+.animate-fade-up    { animation: fade-up 0.7s ease-out both; }
+.animate-mock-float { animation: mock-float 5s ease-in-out infinite; }
+.animate-orb-pulse  { animation: orb-pulse 6s ease-in-out infinite; }
+
+/* ── Délais d'animation ── */
+.orb-delay-2    { animation-delay: 2s; }
+.orb-delay-4    { animation-delay: 4s; }
+.fade-delay-025 { animation-delay: 0.25s; }
+
+/* Swatches hero — timing individuel */
+.float-0 { animation-delay: 0s;    animation-duration: 3.50s; }
+.float-1 { animation-delay: 0.25s; animation-duration: 3.72s; }
+.float-2 { animation-delay: 0.50s; animation-duration: 3.94s; }
+.float-3 { animation-delay: 0.75s; animation-duration: 4.16s; }
+.float-4 { animation-delay: 1.00s; animation-duration: 4.38s; }
+.float-5 { animation-delay: 1.25s; animation-duration: 4.60s; }
+.float-6 { animation-delay: 1.50s; animation-duration: 4.82s; }
+.float-7 { animation-delay: 1.75s; animation-duration: 5.04s; }
+
+/* ── Hero gradient text ── */
+.hero-text-gradient {
+  background: linear-gradient(90deg, #6C5CE7, #E056FD, #FF6B6B, #FDCB6E, #6C5CE7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+  display: inline-block;
+}
+
+/* ── App mockup ── */
+.mockup-glow {
+  background: linear-gradient(90deg, #6C5CE7, #E056FD, #FF6B6B);
+}
+
+.mock-wheel {
+  background: conic-gradient(
+    hsl(0,100%,50%) 0deg,    hsl(30,100%,50%) 30deg,   hsl(60,100%,50%) 60deg,
+    hsl(90,100%,45%) 90deg,  hsl(120,100%,40%) 120deg, hsl(150,100%,45%) 150deg,
+    hsl(180,100%,45%) 180deg, hsl(210,100%,50%) 210deg, hsl(240,100%,55%) 240deg,
+    hsl(270,100%,55%) 270deg, hsl(300,100%,55%) 300deg, hsl(330,100%,50%) 330deg,
+    hsl(360,100%,50%) 360deg
+  );
+}
+
+.mock-wheel-overlay {
+  background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.93) 22%, transparent 62%);
+}
+
+.mock-hex-swatch      { background-color: #6C5CE7; }
+.mock-harmony-violet  { background-color: #6C5CE7; }
+.mock-harmony-mauve   { background-color: #CE56E0; }
+.mock-harmony-coral   { background-color: #E0566C; }
+.mock-harmony-honey   { background-color: #E0CE56; }
+
+.mock-slider-hue {
+  background: linear-gradient(to right,
+    hsl(0,80%,50%), hsl(60,80%,50%), hsl(120,80%,50%),
+    hsl(180,80%,50%), hsl(240,80%,50%), hsl(300,80%,50%), hsl(360,80%,50%)
+  );
+}
+.mock-slider-sat { background: linear-gradient(to right, hsl(258,0%,55%), hsl(258,100%,55%)); }
+.mock-slider-lit { background: linear-gradient(to right, hsl(258,72%,5%), hsl(258,72%,50%), hsl(258,72%,95%)); }
+
+/* ── CTA section ── */
+.cta-gradient {
+  background: linear-gradient(135deg, #4c1d95, #6C5CE7, #E056FD, #FF6B6B, #FDCB6E, #6C5CE7, #4c1d95);
 }
