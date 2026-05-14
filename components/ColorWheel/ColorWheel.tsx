@@ -24,6 +24,9 @@ export default function ColorWheel({
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const isDragging = useRef(false);
 
+  // Stable ref so the touch-event effect never needs to re-add listeners
+  const getColorFromEventRef = useRef<(cx: number, cy: number) => void>(() => {});
+
   const drawWheel = useCallback(() => {
     const canvas = wheelRef.current;
     if (!canvas) return;
@@ -33,13 +36,18 @@ export default function ColorWheel({
     const dpr = window.devicePixelRatio || 1;
     canvas.width = size * dpr;
     canvas.height = size * dpr;
-    ctx.scale(dpr, dpr);
 
     const cx = size / 2;
     const cy = size / 2;
     const radius = size / 2 - 4;
 
-    const imageData = ctx.createImageData(size, size);
+    // Build wheel at 1× resolution into an offscreen canvas, then
+    // scale up with drawImage so putImageData never fights ctx.scale.
+    const offscreen = document.createElement('canvas');
+    offscreen.width = size;
+    offscreen.height = size;
+    const offCtx = offscreen.getContext('2d')!;
+    const imageData = offCtx.createImageData(size, size);
     const data = imageData.data;
 
     for (let y = 0; y < size; y++) {
@@ -55,7 +63,10 @@ export default function ColorWheel({
 
           const color = chroma.hsl(h, s, 0.5);
           const [r, g, b] = color.rgb();
-          const alpha = dist <= radius - 1 ? 255 : Math.round(255 * (1 - (dist - (radius - 1))));
+          const alpha =
+            dist <= radius - 1
+              ? 255
+              : Math.round(255 * (1 - (dist - (radius - 1))));
 
           const idx = (y * size + x) * 4;
           data[idx] = r;
@@ -66,9 +77,13 @@ export default function ColorWheel({
       }
     }
 
-    ctx.putImageData(imageData, 0, 0);
+    offCtx.putImageData(imageData, 0, 0);
 
-    // White center fade
+    // Scale the main ctx for HiDPI, then drawImage respects the transform.
+    ctx.scale(dpr, dpr);
+    ctx.drawImage(offscreen, 0, 0, size, size);
+
+    // White center fade (drawing API — correctly follows ctx.scale)
     const centerGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius * 0.18);
     centerGrad.addColorStop(0, 'rgba(255,255,255,0.85)');
     centerGrad.addColorStop(1, 'rgba(255,255,255,0)');
@@ -94,7 +109,7 @@ export default function ColorWheel({
     const cy = size / 2;
     const radius = size / 2 - 4;
 
-    // Draw harmony lines
+    // Harmony lines
     const positions = harmonyColors.map((hex) => {
       const [h] = chroma(hex).hsl();
       const angle = (((h || 0) - 90) * Math.PI) / 180;
@@ -116,7 +131,7 @@ export default function ColorWheel({
       ctx.setLineDash([]);
     }
 
-    // Draw harmony dots (skip first = selected color)
+    // Harmony dots (skip first = selected colour)
     harmonyColors.slice(1).forEach((hex) => {
       const [h] = chroma(hex).hsl();
       const angle = (((h || 0) - 90) * Math.PI) / 180;
@@ -180,6 +195,11 @@ export default function ColorWheel({
     [size, onColorChange]
   );
 
+  // Keep the ref up-to-date without re-attaching native listeners
+  useEffect(() => {
+    getColorFromEventRef.current = getColorFromEvent;
+  }, [getColorFromEvent]);
+
   const handleMouseDown = (e: React.MouseEvent) => {
     isDragging.current = true;
     getColorFromEvent(e.clientX, e.clientY);
@@ -192,22 +212,42 @@ export default function ColorWheel({
 
   const handleMouseUp = () => { isDragging.current = false; };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    isDragging.current = true;
-    const t = e.touches[0];
-    getColorFromEvent(t.clientX, t.clientY);
-  };
+  // Native (non-passive) touch listeners so preventDefault() stops page scroll
+  useEffect(() => {
+    const canvas = overlayRef.current;
+    if (!canvas) return;
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging.current) return;
-    const t = e.touches[0];
-    getColorFromEvent(t.clientX, t.clientY);
-  };
+    const onTouchStart = (e: TouchEvent) => {
+      e.preventDefault();
+      isDragging.current = true;
+      const t = e.touches[0];
+      getColorFromEventRef.current(t.clientX, t.clientY);
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      if (!isDragging.current) return;
+      const t = e.touches[0];
+      getColorFromEventRef.current(t.clientX, t.clientY);
+    };
+
+    const onTouchEnd = () => { isDragging.current = false; };
+
+    canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+    canvas.addEventListener('touchend', onTouchEnd);
+
+    return () => {
+      canvas.removeEventListener('touchstart', onTouchStart);
+      canvas.removeEventListener('touchmove', onTouchMove);
+      canvas.removeEventListener('touchend', onTouchEnd);
+    };
+  }, []); // Mounted once — getColorFromEvent is accessed via ref
 
   return (
     <div
       className="relative cursor-crosshair select-none"
-      style={{ width: size, height: size }}
+      style={{ width: size, height: size, touchAction: 'none' }}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
     >
@@ -220,9 +260,6 @@ export default function ColorWheel({
         style={{ width: size, height: size, position: 'absolute', top: 0, left: 0, borderRadius: '50%' }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={() => { isDragging.current = false; }}
       />
     </div>
   );
